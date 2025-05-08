@@ -1,0 +1,14 @@
+spring:
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+iotdb:
+  url: jdbc:iotdb://localhost:6667/
+  username: root
+  password: root
+
+logging:
+  level:
+    root: INFO
