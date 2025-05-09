@@ -5,10 +5,11 @@ spring:
       port: 6379
 
 iotdb:
-  url: jdbc:iotdb://localhost:6667/
+  node-urls:
+  - "localhost:6667"
   username: root
   password: root
 
 logging:
   level:
-    root: INFO
+    root: debug

@@ -25,5 +25,4 @@ public class TelemetryDTO {
     private String packetType;
     private String uniqueId;
     private Map<String, Object> attributes;
-    // + getters/setters…
 }

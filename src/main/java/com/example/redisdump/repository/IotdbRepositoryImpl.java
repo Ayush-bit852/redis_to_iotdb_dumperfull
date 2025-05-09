@@ -1,28 +1,24 @@
 package com.example.redisdump.repository;
 
 import com.example.redisdump.dto.TelemetryDTO;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.iotdb.rpc.IoTDBConnectionException;
+import org.apache.iotdb.rpc.StatementExecutionException;
+import org.apache.iotdb.session.pool.SessionPool;
 import org.springframework.stereotype.Repository;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
+import java.io.Serializable;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 @Repository
+@RequiredArgsConstructor
+@Slf4j
 public class IotdbRepositoryImpl implements IotdbRepository {
 
-    private static final Logger log = LoggerFactory.getLogger(IotdbRepositoryImpl.class);
-
-    @Value("${iotdb.url}")
-    private String url;
-
-    @Value("${iotdb.username}")
-    private String username;
-
-    @Value("${iotdb.password}")
-    private String password;
+    private final SessionPool sessionPool;
 
     /**
      * We assume you have created the timeseries table:
@@ -53,33 +49,42 @@ public class IotdbRepositoryImpl implements IotdbRepository {
 
     @Override
     public boolean insertTelemetry(TelemetryDTO dto) {
-        try (Connection conn = DriverManager.getConnection(url, username, password);
-             PreparedStatement ps = conn.prepareStatement(INSERT_SQL)) {
+        String deviceId = "root.vehicle.d0";
+        List<String> measurements = Arrays.asList(
+                "id", "deviceId", "protocol", "serverTime", "deviceTime", "fixTime",
+                "outdated", "valid", "latitude", "longitude", "altitude", "speed",
+                "course", "address", "accuracy", "network", "packetType", "uniqueId"
+        );
 
-            long ts = System.currentTimeMillis();
-            ps.setLong(1, ts);
-            ps.setLong(2, dto.getId());
-            ps.setLong(3, dto.getDeviceId());
-            ps.setString(4, dto.getProtocol());
-            ps.setLong(5, dto.getServerTime());
-            ps.setLong(6, dto.getDeviceTime());
-            ps.setLong(7, dto.getFixTime());
-            ps.setBoolean(8, dto.isOutdated());
-            ps.setBoolean(9, dto.isValid());
-            ps.setDouble(10, dto.getLatitude());
-            ps.setDouble(11, dto.getLongitude());
-            ps.setDouble(12, dto.getAltitude());
-            ps.setDouble(13, dto.getSpeed());
-            ps.setDouble(14, dto.getCourse());
-            ps.setString(15, dto.getAddress());
-            ps.setDouble(16, dto.getAccuracy());
-            ps.setString(17, dto.getNetwork());
-            ps.setString(18, dto.getPacketType());
-            ps.setString(19, dto.getUniqueId());
+        List<? extends Serializable> values = Arrays.asList(
+                dto.getId(),
+                dto.getDeviceId(),
+                dto.getProtocol(),
+                dto.getServerTime(),
+                dto.getDeviceTime(),
+                dto.getFixTime(),
+                dto.isOutdated(),
+                dto.isValid(),
+                dto.getLatitude(),
+                dto.getLongitude(),
+                dto.getAltitude(),
+                dto.getSpeed(),
+                dto.getCourse(),
+                dto.getAddress(),
+                dto.getAccuracy(),
+                dto.getNetwork(),
+                dto.getPacketType(),
+                dto.getUniqueId()
+        );
 
-            ps.execute();
+        try {
+            sessionPool.insertRecordsOfOneDevice(
+                    deviceId,
+                    values.parallelStream().collect(each -> each, Collections::list),
+                    measurements,
+                    values);
             return true;
-        } catch (Exception e) {
+        } catch (IoTDBConnectionException | StatementExecutionException e) {
             log.error("Failed to insert telemetry into IoTDB", e);
             return false;
         }
