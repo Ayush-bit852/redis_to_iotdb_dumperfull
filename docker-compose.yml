@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+  iotdb:
+    image: apache/iotdb:latest
+    ports:
+      - "6667:6667"
+      - "31999:31999"
+      - "18080:18080"
+    environment:
+      - IOTDB_USER=root
+      - IOTDB_PASSWORD=root
